@@ -24,6 +24,7 @@ function App() {
   const currentPage = useAppStore(s => s.currentPage);
   const userProfile = useAppStore(s => s.userProfile);
   const performanceMode = useAppStore(s => s.performanceMode);
+  const appScale = useAppStore(s => s.appScale);
   const hasParticles = performanceMode !== 'low';
 
   const renderPage = () => {
@@ -55,36 +56,38 @@ function App() {
   const rootBg = performanceMode === 'low' ? 'bg-[#050816]' : 'bg-[#040710]';
 
   return (
-    <div className={`fixed inset-0 ${rootBg} text-white ${isRtl ? 'rtl' : 'ltr'}`}>
-      {/* Atmospheric background layers */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0" style={{
-          background: performanceMode === 'low'
-            ? 'rgba(4,7,16,1)'
-            : 'radial-gradient(ellipse at 20% 15%, rgba(212,168,83,0.02) 0%, transparent 40%), radial-gradient(ellipse at 80% 85%, rgba(45,212,168,0.012) 0%, transparent 35%), radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.008) 0%, transparent 45%)',
-        }}/>
-        {hasParticles && (
-          <div className="absolute inset-0 animate-breathe" style={{
-            background: 'radial-gradient(ellipse at 55% 35%, rgba(212,168,83,0.012) 0%, transparent 45%)',
+    <div className={`fixed inset-0 ${rootBg} text-white ${isRtl ? 'rtl' : 'ltr'}`} style={{ overflowX: 'hidden' }}>
+      <div style={{ position: 'absolute', left: '50%', top: 0, width: `${100 / appScale}%`, minHeight: '100vh', transform: `translateX(-50%) scale(${appScale})`, transformOrigin: 'top center' }}>
+        {/* Atmospheric background layers */}
+        <div className="fixed inset-0 z-0">
+          <div className="absolute inset-0" style={{
+            background: performanceMode === 'low'
+              ? 'rgba(4,7,16,1)'
+              : 'radial-gradient(ellipse at 20% 15%, rgba(212,168,83,0.02) 0%, transparent 40%), radial-gradient(ellipse at 80% 85%, rgba(45,212,168,0.012) 0%, transparent 35%), radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.008) 0%, transparent 45%)',
           }}/>
-        )}
-        {hasParticles && <ParticleBackground />}
-      </div>
-
-      {isOverlay ? (
-        <AnimatePresence mode="wait">{renderPage()}</AnimatePresence>
-      ) : (
-        <div className="fixed inset-0 z-10 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <AnimatePresence mode="wait">
-              <PageTransition key={currentPage} pageKey={currentPage}>
-                {renderPage()}
-              </PageTransition>
-            </AnimatePresence>
-          </div>
-          <BottomNav />
+          {hasParticles && (
+            <div className="absolute inset-0 animate-breathe" style={{
+              background: 'radial-gradient(ellipse at 55% 35%, rgba(212,168,83,0.012) 0%, transparent 45%)',
+            }}/>
+          )}
+          {hasParticles && <ParticleBackground />}
         </div>
-      )}
+
+        {isOverlay ? (
+          <AnimatePresence mode="wait">{renderPage()}</AnimatePresence>
+        ) : (
+          <div className="fixed inset-0 z-10 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              <AnimatePresence mode="wait">
+                <PageTransition key={currentPage} pageKey={currentPage}>
+                  {renderPage()}
+                </PageTransition>
+              </AnimatePresence>
+            </div>
+            <BottomNav />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

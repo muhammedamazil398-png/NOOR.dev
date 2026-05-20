@@ -11,6 +11,8 @@ export default function SettingsPage() {
   const setLanguageLoaded = useAppStore(s => s.setLanguageLoaded);
   const performanceMode = useAppStore(s => s.performanceMode);
   const setPerformanceMode = useAppStore(s => s.setPerformanceMode);
+  const appScale = useAppStore(s => s.appScale);
+  const setAppScale = useAppStore(s => s.setAppScale);
 
   const [name, setName] = useState(userProfile?.name || '');
   const [city, setCity] = useState(userProfile?.city || '');
@@ -124,6 +126,48 @@ export default function SettingsPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Accessibility / Size */}
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass rounded-2xl p-5">
+          <h3 className="text-white/50 text-xs font-medium mb-4 tracking-wider">EASY READ</h3>
+          <p className="text-white/40 text-sm mb-4">Adjust the full interface size for easier reading after login. This scales buttons, text, cards, and the whole app layout.</p>
+          <div className="mb-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <span className="text-white/70 text-sm">Current Scale</span>
+              <span className="text-amber-200 text-sm font-semibold">{Math.round(appScale * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0.85"
+              max="1.3"
+              step="0.05"
+              value={appScale}
+              onChange={(e) => setAppScale(parseFloat(e.target.value))}
+              className="w-full accent-amber-400"
+              aria-label="Overall app size"
+            />
+          </div>
+          <div className="grid gap-3">
+            {[
+              { value: 0.85, label: 'Small' },
+              { value: 1, label: 'Normal' },
+              { value: 1.1, label: 'Large' },
+              { value: 1.2, label: 'Extra Large' },
+              { value: 1.3, label: 'Maximum' },
+            ].map(option => (
+              <button type="button" key={option.value} onClick={() => setAppScale(option.value)}
+                className={`w-full p-4 rounded-2xl text-left transition-all border ${appScale === option.value ? 'border-amber-400/40 bg-amber-500/10 text-amber-200' : 'border-white/[0.06] bg-white/[0.015] text-white/70 hover:border-white/[0.16]'}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{option.label}</p>
+                    <p className="text-white/30 text-[11px] mt-1">Scale {Math.round(option.value * 100)}%</p>
+                  </div>
+                  {appScale === option.value && <span className="text-emerald-300 text-[11px] uppercase tracking-[0.2em]">Active</span>}
+                </div>
+              </button>
+            ))}
           </div>
         </motion.div>
 

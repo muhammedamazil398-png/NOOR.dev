@@ -9,6 +9,10 @@ export default function QuranPage() {
   const setCurrentSurah = useAppStore(s => s.setCurrentSurah);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'Meccan' | 'Medinan'>('all');
+  const downloadedSurahs = new Set<number>();
+  for (let n = 1; n <= 114; n += 1) {
+    if (localStorage.getItem(`noor-quran-cache-surah-${n}`) === 'true') downloadedSurahs.add(n);
+  }
 
   const filtered = SURAHS.filter(s => {
     const matchesSearch =
@@ -106,7 +110,12 @@ export default function QuranPage() {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-white/80 font-medium text-sm truncate">{surah.englishName}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/80 font-medium text-sm truncate">{surah.englishName}</span>
+                  {downloadedSurahs.has(surah.number) && (
+                    <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-emerald-200 bg-emerald-500/10 px-2 py-1 rounded-full">Offline</span>
+                  )}
+                </div>
                 <span className="font-arabic text-amber-200/60 text-lg shrink-0">{surah.name}</span>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">

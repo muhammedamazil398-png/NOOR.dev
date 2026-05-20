@@ -37,6 +37,7 @@ interface AppState {
   currentBookId: string;
   languageLoaded: boolean;
   performanceMode: 'low' | 'high';
+  appScale: number;
   
   setPage: (page: AppPage) => void;
   setUserProfile: (profile: UserProfile) => void;
@@ -51,14 +52,16 @@ interface AppState {
   setCurrentBookId: (id: string) => void;
   setLanguageLoaded: (loaded: boolean) => void;
   setPerformanceMode: (mode: 'low' | 'high') => void;
+  setAppScale: (scale: number) => void;
 }
 
 const savedProfile = localStorage.getItem('noor-profile');
 const savedOnboarding = localStorage.getItem('noor-onboarding-complete');
 const savedPerformanceMode = (localStorage.getItem('noor-performance-mode') as 'low' | 'high') || 'high';
+const savedAppScale = parseFloat(localStorage.getItem('noor-app-scale') || '1') || 1;
 
 export const useAppStore = create<AppState>((set) => ({
-  currentPage: savedOnboarding === 'true' ? 'home' : 'splash',
+  currentPage: 'splash',
   previousPage: null,
   userProfile: savedProfile ? JSON.parse(savedProfile) : null,
   hasCompletedOnboarding: savedOnboarding === 'true',
@@ -72,6 +75,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentBookId: '',
   languageLoaded: true,
   performanceMode: savedPerformanceMode,
+  appScale: savedAppScale,
   
   setPage: (page) => set((state) => ({ currentPage: page, previousPage: state.currentPage })),
   setUserProfile: (profile) => {
@@ -94,6 +98,10 @@ export const useAppStore = create<AppState>((set) => ({
   setPerformanceMode: (mode) => {
     localStorage.setItem('noor-performance-mode', mode);
     set({ performanceMode: mode });
+  },
+  setAppScale: (scale) => {
+    localStorage.setItem('noor-app-scale', String(scale));
+    set({ appScale: scale });
   },
 }));
 

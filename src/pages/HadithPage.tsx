@@ -7,7 +7,8 @@ import SceneBg from '../components/SceneBg';
 interface HadithEntry {
   id: number;
   num: number;
-  text: string;
+  arabic?: string;
+  english: string;
   section: string;
   grade: string;
 }
@@ -15,19 +16,33 @@ interface HadithEntry {
 // Verified CDN URLs
 const COLLECTIONS = [
   { id: 'bukhari', name: 'Sahih al-Bukhari', arabic: 'صحيح البخاري', total: 7563, color: '#2dd4a8',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-bukhari.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-bukhari.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-bukhari.min.json',
+    format: 'fawaz' as const },
   { id: 'muslim', name: 'Sahih Muslim', arabic: 'صحيح مسلم', total: 7459, color: '#6366f1',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-muslim.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-muslim.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-muslim.min.json',
+    format: 'fawaz' as const },
   { id: 'abudawud', name: 'Sunan Abu Dawud', arabic: 'سنن أبي داود', total: 5274, color: '#f59e0b',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-abudawud.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-abudawud.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-abudawud.min.json',
+    format: 'fawaz' as const },
   { id: 'tirmidhi', name: "Jami' at-Tirmidhi", arabic: 'جامع الترمذي', total: 3956, color: '#ec4899',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-tirmidhi.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-tirmidhi.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-tirmidhi.min.json',
+    format: 'fawaz' as const },
   { id: 'nasai', name: "Sunan an-Nasa'i", arabic: 'سنن النسائي', total: 5758, color: '#a855f7',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-nasai.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-nasai.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-nasai.min.json',
+    format: 'fawaz' as const },
   { id: 'ibnmajah', name: 'Sunan Ibn Majah', arabic: 'سنن ابن ماجه', total: 4341, color: '#d4a853',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-ibnmajah.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-ibnmajah.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-ibnmajah.min.json',
+    format: 'fawaz' as const },
   { id: 'malik', name: 'Muwatta Malik', arabic: 'موطأ مالك', total: 1832, color: '#14b8a6',
-    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-malik.min.json', format: 'fawaz' as const },
+    url: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-malik.min.json',
+    arabicUrl: 'https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-malik.min.json',
+    format: 'fawaz' as const },
 ];
 
 const FEATURED = {
@@ -68,21 +83,21 @@ export default function HadithPage() {
     if (!c) { setLoading(false); return; }
 
     // Parse based on data format
-    const parseFawaz = (data: any): HadithEntry[] => {
+    const parseFawazEntries = (data: any) => {
       const secs: Record<string, string> = data.metadata?.sections || {};
       const arr = data.hadiths || [];
       return arr
-        .filter((h: any) => h.text && h.text.trim())
+        .filter((h: any) => (h.text || h.english || h.arabic) && (h.text || h.english || h.arabic).trim())
         .map((h: any, i: number) => ({
           id: i,
-          num: h.hadithnumber || i + 1,
-          text: (h.text || '').trim(),
+          num: h.hadithnumber || h.id || i + 1,
+          text: (h.text || h.english || h.arabic || '').trim(),
           section: h.reference?.book ? (secs[String(h.reference.book)] || `Book ${h.reference.book}`) : '',
           grade: h.grades?.[0]?.grade || '',
         }));
     };
 
-    const parseAhmedBaset = (data: any): HadithEntry[] => {
+    const parseAhmedBaset = (data: any) => {
       const chapters: Record<number, string> = {};
       (data.chapters || []).forEach((ch: any) => { chapters[ch.id] = ch.english || ch.arabic || ''; });
       const arr = data.hadiths || [];
@@ -95,34 +110,73 @@ export default function HadithPage() {
       }));
     };
 
+    const mapHadiths = (entries: any[]) => {
+      const map = new Map<number, HadithEntry>();
+      entries.forEach((h) => {
+        const existing = map.get(h.num);
+        if (existing) {
+          if (h.englishText) existing.english = h.englishText;
+          if (h.arabicText) existing.arabic = h.arabicText;
+          return;
+        }
+        map.set(h.num, {
+          id: h.id,
+          num: h.num,
+          arabic: h.arabicText || h.arabic || '',
+          english: h.englishText || h.english || h.text || '',
+          section: h.section || '',
+          grade: h.grade || '',
+        });
+      });
+      return Array.from(map.values()).sort((a, b) => a.num - b.num);
+    };
+
+    const fetchData = async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('fetch failed');
+      return res.json();
+    };
+
     let success = false;
     try {
-      const res = await fetch(c.url);
-      if (!res.ok) throw new Error('fetch failed');
-      const data = await res.json();
-      const mapped = c.format === 'ahmedbaset' ? parseAhmedBaset(data) : parseFawaz(data);
-      if (mapped.length > 0) {
-        cache[id] = { hadiths: mapped, sections: {} };
-        setHadiths(mapped);
+      const englishPromise = fetchData(c.url);
+      const arabicPromise = c.arabicUrl ? fetchData(c.arabicUrl) : Promise.resolve(null);
+      const [englishData, arabicData] = await Promise.allSettled([englishPromise, arabicPromise]);
+
+      const englishEntries = englishData.status === 'fulfilled'
+        ? (c.format === 'ahmedbaset' ? parseAhmedBaset(englishData.value) : parseFawazEntries(englishData.value))
+        : [];
+      const arabicEntries = arabicData.status === 'fulfilled' && arabicData.value
+        ? (c.format === 'ahmedbaset' ? parseAhmedBaset(arabicData.value) : parseFawazEntries(arabicData.value))
+        : [];
+
+      const merged = mapHadiths(
+        englishEntries.map((h) => ({ ...h, englishText: h.text })).concat(
+          arabicEntries.map((h) => ({ ...h, arabicText: h.text }))
+        )
+      );
+
+      if (merged.length > 0) {
+        cache[id] = { hadiths: merged, sections: {} };
+        setHadiths(merged);
         setSections({});
         success = true;
       }
-    } catch { /* continue to fallbacks */ }
+    } catch {
+      success = false;
+    }
 
-    // Fallback for fawaz format: try alternate URLs
     if (!success && c.format === 'fawaz') {
       try {
         const altUrl = c.url.replace('.min.json', '.json');
-        const res2 = await fetch(altUrl);
-        if (res2.ok) {
-          const data2 = await res2.json();
-          const mapped2 = parseFawaz(data2);
-          if (mapped2.length > 0) {
-            cache[id] = { hadiths: mapped2, sections: {} };
-            setHadiths(mapped2);
-            setSections({});
-            success = true;
-          }
+        const altData = await fetchData(altUrl);
+        const mapped2 = parseFawazEntries(altData).map((h: any) => ({ ...h, englishText: h.text }));
+        const merged2 = mapHadiths(mapped2);
+        if (merged2.length > 0) {
+          cache[id] = { hadiths: merged2, sections: {} };
+          setHadiths(merged2);
+          setSections({});
+          success = true;
         }
       } catch { /* continue */ }
     }
@@ -160,7 +214,11 @@ export default function HadithPage() {
   };
 
   const filtered = search
-    ? hadiths.filter(h => h.text.toLowerCase().includes(search.toLowerCase()) || String(h.num).includes(search))
+    ? hadiths.filter(h => (
+        (h.english || '').toLowerCase().includes(search.toLowerCase()) ||
+        (h.arabic || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(h.num).includes(search)
+      ))
     : hadiths;
   const visible = filtered.slice(0, visibleCount);
 
@@ -279,8 +337,13 @@ export default function HadithPage() {
                       <span className="text-amber-200/25 text-[10px] font-mono mt-0.5 shrink-0 w-10 text-right">#{h.num}</span>
                       <div className="flex-1 min-w-0">
                         {h.section && <p className="text-amber-200/20 text-[9px] mb-1 line-clamp-1">{h.section}</p>}
-                        <p className={`text-white/50 text-[13px] leading-relaxed font-light ${expandedH === i ? '' : 'line-clamp-3'}`}>
-                          {h.text}
+                        {h.arabic ? (
+                          <p className={`font-arabic text-white/60 text-[14px] leading-relaxed text-right ${expandedH === i ? '' : 'line-clamp-3'}`}>
+                            {h.arabic}
+                          </p>
+                        ) : null}
+                        <p className={`text-white/50 text-[13px] leading-relaxed mt-2 ${expandedH === i ? '' : 'line-clamp-3'}`}>
+                          {h.english}
                         </p>
                         {h.grade && (
                           <p className={`text-[9px] mt-1.5 ${h.grade.toLowerCase().includes('sahih') ? 'text-emerald-300/30' : 'text-amber-200/25'}`}>

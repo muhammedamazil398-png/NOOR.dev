@@ -34,6 +34,8 @@ const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, string> = {
 
 const RECITERS = [
   { id: 'ar.alafasy', name: 'Mishary Alafasy' },
+  { id: 'ar.sudais', name: 'Abdurrahman As-Sudais' },
+  { id: 'ar.abdulbasit', name: 'Abdul Basit' },
   { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary' },
   { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi' },
 ];
@@ -54,8 +56,14 @@ export default function QuranReaderPage() {
   const [showReciterMenu, setShowReciterMenu] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
+  const [cachedSurah, setCachedSurah] = useState(false);
 
   const translationCode = LANGUAGE_TO_QURAN_TRANSLATION[userProfile?.language || 'en'] || 'en.asad';
+
+  useEffect(() => {
+    const cacheMarker = localStorage.getItem(`noor-quran-cache-surah-${currentSurah}`) === 'true';
+    setCachedSurah(cacheMarker);
+  }, [currentSurah]);
 
   useEffect(() => {
     setLoading(true);
@@ -68,7 +76,9 @@ export default function QuranReaderPage() {
       if (arabic.data?.ayahs) setAyahs(arabic.data.ayahs);
       if (translation.data?.ayahs) setTranslations(translation.data.ayahs);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => {
+      setLoading(false);
+    });
   }, [currentSurah, translationCode]);
 
   const playAyah = (ayahGlobalNum: number, e: MouseEvent<HTMLButtonElement>) => {
@@ -91,6 +101,23 @@ export default function QuranReaderPage() {
       setCurrentSurah(n);
       setSelectedAyah(null);
       window.scrollTo(0, 0);
+    }
+  };
+
+  const cacheCurrentSurah = async () => {
+    if (!('caches' in window)) return;
+    try {
+      const cache = await caches.open('noor-pwa-cache-v1');
+      const urls = [
+        `https://api.alquran.cloud/v1/surah/${currentSurah}/quran-uthmani`,
+        `https://api.alquran.cloud/v1/surah/${currentSurah}/${translationCode}`,
+        ...ayahs.map(ayah => `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`),
+      ];
+      await Promise.all(urls.map(url => cache.add(url).catch(() => {})));
+      localStorage.setItem(`noor-quran-cache-surah-${currentSurah}`, 'true');
+      setCachedSurah(true);
+    } catch {
+      // ignore cache failures silently
     }
   };
 
@@ -122,6 +149,9 @@ export default function QuranReaderPage() {
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
               </svg>
             </motion.button>
+            <RainbowButton onClick={cacheCurrentSurah} size="sm" className={cachedSurah ? 'bg-emerald-500/10 text-emerald-200' : ''}>
+              {cachedSurah ? 'Saved Offline' : 'Download Surah'}
+            </RainbowButton>
           </div>
         </div>
         <AnimatePresence>
