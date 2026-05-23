@@ -7,10 +7,15 @@ import RainbowButton from '../components/RainbowButton';
 interface Ayah { number: number; numberInSurah: number; text: string; juz: number; }
 interface TranslationAyah { numberInSurah: number; text: string; }
 
-// Mapping of language codes to quran.com translation IDs.
-// English uses Saheeh International via Quran.com, a trusted, scholarly translation source.
-const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number> = {
-  en: 20, // Saheeh International
+// Simple HTML sanitizer to remove <sup ...> footnote tags and other HTML from translations
+function stripHtml(input: string) {
+  return input ? input.replace(/<[^>]+>/g, '') : '';
+}
+// Mapping of language codes to translation sources.
+// Use Dr. Mustafa Khattab for English via `en.musthafa_khattab` (from api.alquran.cloud).
+// Other languages use quran.com translation IDs.
+const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number | string> = {
+  en: 'en.musthafa_khattab', // Dr. Mustafa Khattab (trusted, not AI-generated)
   ar: 20,
   ur: 87,
   bn: 58,
@@ -27,10 +32,10 @@ const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number> = {
   ja: 109,
   ko: 92,
   // Fallback for unsupported languages
-  ps: 20,
-  sw: 20,
-  ha: 20,
-  so: 20,
+  ps: 'en.musthafa_khattab',
+  sw: 'en.musthafa_khattab',
+  ha: 'en.musthafa_khattab',
+  so: 'en.musthafa_khattab',
 };
 
 const RECITERS = [
@@ -72,6 +77,37 @@ export default function QuranReaderPage() {
     setAyahs([]);
     setTranslations([]);
 
+    const isKhattab = typeof translationCode === 'string' && translationCode.startsWith('en.musthafa');
+
+    if (isKhattab) {
+      // Use api.alquran.cloud for Dr. Mustafa Khattab translations and quran-uthmani Arabic text
+      Promise.all([
+        fetch(`https://api.alquran.cloud/v1/surah/${currentSurah}/quran-uthmani`).then(r => r.json()),
+        fetch(`https://api.alquran.cloud/v1/surah/${currentSurah}/en.musthafa_khattab`).then(r => r.json()),
+      ]).then(([arabic, translation]) => {
+        const arabicAyahs = arabic.data?.ayahs || [];
+        const transAyahs = translation.data?.ayahs || [];
+
+        const formattedAyahs: Ayah[] = arabicAyahs.map((ayah: any, i: number) => ({
+          number: ayah.number || i + 1,
+          numberInSurah: ayah.number || i + 1,
+          text: ayah.text || '',
+          juz: ayah.juz || 0,
+        }));
+
+        const formattedTranslations: TranslationAyah[] = transAyahs.map((t: any, i: number) => ({
+          numberInSurah: t.number || i + 1,
+          text: stripHtml(t.text || ''),
+        }));
+
+        setAyahs(formattedAyahs);
+        setTranslations(formattedTranslations);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+      return;
+    }
+
+    // Default: use quran.com verses endpoint (scholarly translations).
     const translationFetch = fetch(
       `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=text_uthmani,translations&language=${translationLanguage}`
     ).then(r => r.json());
@@ -87,7 +123,7 @@ export default function QuranReaderPage() {
 
       const formattedTranslations: TranslationAyah[] = ayahs.map((ayah: any) => ({
         numberInSurah: ayah.verse_key?.split(':')[1] || ayah.verse_number,
-        text: ayah.translations?.[0]?.text || '',
+        text: stripHtml(ayah.translations?.[0]?.text || ''),
       }));
 
       setAyahs(formattedAyahs);
@@ -126,7 +162,9 @@ export default function QuranReaderPage() {
     if (!('caches' in window)) return;
     try {
       const cache = await caches.open('noor-pwa-cache-v1');
-      const translationUrl = `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=translations&language=${translationLanguage}`;
+      const translationUrl = (typeof translationCode === 'string' && translationCode.startsWith('en.musthafa'))
+        ? `https://api.alquran.cloud/v1/surah/${currentSurah}/en.musthafa_khattab`
+        : `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=translations&language=${translationLanguage}`;
       const urls = [
         `https://api.alquran.cloud/v1/surah/${currentSurah}/quran-uthmani`,
         translationUrl,
