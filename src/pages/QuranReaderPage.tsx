@@ -7,37 +7,38 @@ import RainbowButton from '../components/RainbowButton';
 interface Ayah { number: number; numberInSurah: number; text: string; juz: number; }
 interface TranslationAyah { numberInSurah: number; text: string; }
 
-// Mapping of language codes to Quran API translation codes
-const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, string> = {
-  en: 'en.asad',
-  ar: 'ar.muyassar',
-  ur: 'ur.ahmedali',
-  bn: 'bn.bengali',
-  fa: 'fa.ansarian',
-  tr: 'tr.diyanet',
-  fr: 'fr.medina',
-  de: 'de.bubenheim',
-  es: 'es.cortes',
-  ru: 'ru.osmanov',
-  id: 'id.indonesian',
-  ms: 'ms.basmeih',
-  hi: 'hi.hindi',
-  zh: 'zh.jian',
-  ja: 'ja.japanese',
-  ko: 'ko.korean',
+// Mapping of language codes to quran.com translation IDs.
+// English uses Saheeh International via Quran.com, a trusted, scholarly translation source.
+const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number> = {
+  en: 20, // Saheeh International
+  ar: 20,
+  ur: 87,
+  bn: 58,
+  fa: 82,
+  tr: 77,
+  fr: 95,
+  de: 76,
+  es: 93,
+  ru: 106,
+  id: 33,
+  ms: 39,
+  hi: 54,
+  zh: 112,
+  ja: 109,
+  ko: 92,
   // Fallback for unsupported languages
-  ps: 'en.asad',
-  sw: 'en.asad',
-  ha: 'en.asad',
-  so: 'en.asad',
+  ps: 20,
+  sw: 20,
+  ha: 20,
+  so: 20,
 };
 
 const RECITERS = [
-  { id: 'ar.alafasy', name: 'Mishary Alafasy' },
-  { id: 'ar.sudais', name: 'Abdurrahman As-Sudais' },
-  { id: 'ar.abdulbasit', name: 'Abdul Basit' },
-  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary' },
-  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi' },
+  { id: '7', name: 'Mishary Alafasy' },
+  { id: '4', name: 'Abdurrahman As-Sudais' },
+  { id: '1', name: 'Abdul Basit' },
+  { id: '5', name: 'Mahmoud Khalil Al-Husary' },
+  { id: '13', name: 'Mohamed Siddiq Al-Minshawi' },
 ];
 
 export default function QuranReaderPage() {
@@ -58,7 +59,8 @@ export default function QuranReaderPage() {
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
   const [cachedSurah, setCachedSurah] = useState(false);
 
-  const translationCode = LANGUAGE_TO_QURAN_TRANSLATION[userProfile?.language || 'en'] || 'en.asad';
+  const translationCode = LANGUAGE_TO_QURAN_TRANSLATION[userProfile?.language || 'en'] || 20;
+  const translationLanguage = userProfile?.language || 'en';
 
   useEffect(() => {
     const cacheMarker = localStorage.getItem(`noor-quran-cache-surah-${currentSurah}`) === 'true';
@@ -69,22 +71,40 @@ export default function QuranReaderPage() {
     setLoading(true);
     setAyahs([]);
     setTranslations([]);
-    Promise.all([
-      fetch(`https://api.alquran.cloud/v1/surah/${currentSurah}/quran-uthmani`).then(r => r.json()),
-      fetch(`https://api.alquran.cloud/v1/surah/${currentSurah}/${translationCode}`).then(r => r.json()),
-    ]).then(([arabic, translation]) => {
-      if (arabic.data?.ayahs) setAyahs(arabic.data.ayahs);
-      if (translation.data?.ayahs) setTranslations(translation.data.ayahs);
+
+    const arabicFetch = fetch(`https://api.quran.com/v4/surah/${currentSurah}`).then(r => r.json());
+    const wordsFetch = fetch(`https://api.quran.com/v4/surah/${currentSurah}?language=en&words=true`).then(r => r.json());
+    const translationFetch = fetch(
+      `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=translations&language=${translationLanguage}`
+    ).then(r => r.json());
+
+    Promise.all([arabicFetch, wordsFetch, translationFetch]).then(([arabic, words, translation]) => {
+      const ayahs = arabic.data?.verses || [];
+      const formattedAyahs: Ayah[] = ayahs.map((ayah: any) => ({
+        number: ayah.verse_number,
+        numberInSurah: ayah.verse_key?.split(':')[1] || ayah.verse_number,
+        text: ayah.text_uthmani || ayah.text_indopak || ayah.text,
+        juz: ayah.juz_number || 0,
+      }));
+
+      const formattedTranslations: TranslationAyah[] = (translation.verses || []).map((ayah: any) => ({
+        numberInSurah: ayah.verse_key?.split(':')[1] || ayah.verse_number,
+        text: ayah.translations?.[0]?.text || '',
+      }));
+
+      setAyahs(formattedAyahs);
+      setTranslations(formattedTranslations);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
     });
-  }, [currentSurah, translationCode]);
+  }, [currentSurah, translationCode, translationLanguage]);
 
   const playAyah = (ayahGlobalNum: number, e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (audioEl) audioEl.pause();
-    const audio = new Audio(`https://cdn.islamic.network/quran/audio/128/${reciter}/${ayahGlobalNum}.mp3`);
+    // Using Quran.com CDN for Qur'an recitations
+    const audio = new Audio(`https://verses.quran.com/${reciter}/${ayahGlobalNum}.mp3`);
     audio.play().catch(() => {});
     audio.onended = () => setIsPlaying(false);
     setAudioEl(audio);
@@ -108,9 +128,10 @@ export default function QuranReaderPage() {
     if (!('caches' in window)) return;
     try {
       const cache = await caches.open('noor-pwa-cache-v1');
+      const translationUrl = `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=translations&language=${translationLanguage}`;
       const urls = [
         `https://api.alquran.cloud/v1/surah/${currentSurah}/quran-uthmani`,
-        `https://api.alquran.cloud/v1/surah/${currentSurah}/${translationCode}`,
+        translationUrl,
         ...ayahs.map(ayah => `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`),
       ];
       await Promise.all(urls.map(url => cache.add(url).catch(() => {})));

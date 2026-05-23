@@ -34,12 +34,26 @@ export default function SalahPage() {
     const now = new Date();
     const nowM = now.getHours() * 60 + now.getMinutes();
     const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-    let current = 'Isha';
-    for (let i = prayers.length - 1; i >= 0; i--) {
-      const [h, m] = prayerTimes[prayers[i]].split(':').map(Number);
-      if (nowM >= h * 60 + m) { current = prayers[i]; break; }
+    
+    // Find the next prayer (first prayer time that hasn't started yet today)
+    let nextPrayer = 'Fajr'; // Default to Fajr if we're past all prayers today
+    for (let i = 0; i < prayers.length; i++) {
+      try {
+        const timeStr = prayerTimes[prayers[i]];
+        if (!timeStr) continue;
+        const [h, m] = timeStr.split(':').map(Number);
+        if (h !== undefined && m !== undefined) {
+          const prayerM = h * 60 + m;
+          if (nowM < prayerM) {
+            nextPrayer = prayers[i];
+            break;
+          }
+        }
+      } catch (e) {
+        // Skip if parsing fails
+      }
     }
-    setCurrentPrayer(current);
+    setCurrentPrayer(nextPrayer);
   }, [prayerTimes]);
 
 
@@ -72,13 +86,13 @@ export default function SalahPage() {
         </div>
       </div>
 
-      {/* Current Prayer */}
+      {/* Next Prayer */}
       {currentPrayer && prayerTimes && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="mx-6 mb-6 rounded-2xl p-6 relative overflow-hidden"
           style={{ background: `linear-gradient(135deg, ${PRAYER_COLORS[currentPrayer]}08, transparent)`, border: `1px solid ${PRAYER_COLORS[currentPrayer]}15` }}>
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-10" style={{ background: PRAYER_COLORS[currentPrayer] }} />
-          <p className="text-white/25 text-[10px] uppercase tracking-[0.25em] mb-2">Current Prayer</p>
+          <p className="text-white/25 text-[10px] uppercase tracking-[0.25em] mb-2">Next Prayer</p>
           <div className="flex items-end justify-between">
             <h2 className="text-3xl font-bold" style={{ color: PRAYER_COLORS[currentPrayer] }}>{currentPrayer}</h2>
             <div className="text-3xl font-bold text-white/80 font-mono tracking-tight">{prayerTimes[currentPrayer]}</div>
