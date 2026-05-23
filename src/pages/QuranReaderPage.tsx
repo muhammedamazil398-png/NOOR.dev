@@ -14,8 +14,9 @@ function stripHtml(input: string) {
 // Mapping of language codes to translation sources.
 // Use Dr. Mustafa Khattab for English via `en.musthafa_khattab` (from api.alquran.cloud).
 // Other languages use quran.com translation IDs.
-const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number | string> = {
-  en: 'en.musthafa_khattab', // Dr. Mustafa Khattab (trusted, not AI-generated)
+const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number> = {
+  // Default English translation: Sahih International (trusted, scholarly)
+  en: 20,
   ar: 20,
   ur: 87,
   bn: 58,
@@ -32,10 +33,10 @@ const LANGUAGE_TO_QURAN_TRANSLATION: Record<string, number | string> = {
   ja: 109,
   ko: 92,
   // Fallback for unsupported languages
-  ps: 'en.musthafa_khattab',
-  sw: 'en.musthafa_khattab',
-  ha: 'en.musthafa_khattab',
-  so: 'en.musthafa_khattab',
+  ps: 20,
+  sw: 20,
+  ha: 20,
+  so: 20,
 };
 
 const RECITERS = [
