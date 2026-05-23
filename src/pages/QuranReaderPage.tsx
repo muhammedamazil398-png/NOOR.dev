@@ -72,22 +72,20 @@ export default function QuranReaderPage() {
     setAyahs([]);
     setTranslations([]);
 
-    const arabicFetch = fetch(`https://api.quran.com/v4/surah/${currentSurah}`).then(r => r.json());
-    const wordsFetch = fetch(`https://api.quran.com/v4/surah/${currentSurah}?language=en&words=true`).then(r => r.json());
     const translationFetch = fetch(
-      `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=translations&language=${translationLanguage}`
+      `https://api.quran.com/api/v4/verses/by_chapter/${currentSurah}?translation_id=${translationCode}&translations=${translationCode}&fields=text_uthmani,translations&language=${translationLanguage}`
     ).then(r => r.json());
 
-    Promise.all([arabicFetch, wordsFetch, translationFetch]).then(([arabic, words, translation]) => {
-      const ayahs = arabic.data?.verses || [];
+    translationFetch.then((translation) => {
+      const ayahs = translation.verses || [];
       const formattedAyahs: Ayah[] = ayahs.map((ayah: any) => ({
         number: ayah.verse_number,
         numberInSurah: ayah.verse_key?.split(':')[1] || ayah.verse_number,
-        text: ayah.text_uthmani || ayah.text_indopak || ayah.text,
+        text: ayah.text_uthmani || ayah.text_indopak || ayah.text || '',
         juz: ayah.juz_number || 0,
       }));
 
-      const formattedTranslations: TranslationAyah[] = (translation.verses || []).map((ayah: any) => ({
+      const formattedTranslations: TranslationAyah[] = ayahs.map((ayah: any) => ({
         numberInSurah: ayah.verse_key?.split(':')[1] || ayah.verse_number,
         text: ayah.translations?.[0]?.text || '',
       }));
